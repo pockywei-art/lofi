@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🇹🇼 Taiwan Deep Travel</title>
+    <!-- 引入 Tailwind CSS CDN 以實現現代設計風格 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Noto Sans TC 中文字體 -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;700&display=swap" rel="stylesheet">
+    <!-- 引入 Lucide Icons (取代 Font Awesome) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        /* 自定義 Tailwind 配置 */
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            min-height: 100vh;
+            
+            /* 修正為更有設計感的材質背景 */
+            background-color: #f0f4f8; /* Base Color: Soft grey-blue */
+            
+            /* 結合漸變色與微弱的重複紋理 */
+            background-image: 
+                /* 1. Primary Gradient (柔和的顏色過渡) */
+                linear-gradient(135deg, #f0f4f8 0%, #e0e7f1 100%),
+                /* 2. Secondary Pattern (極微弱的線條紋理，模擬紙張或布料) */
+                repeating-linear-gradient(45deg, 
+                    rgba(255, 255, 255, 0.03) 0, 
+                    rgba(255, 255, 255, 0.03) 1px, 
+                    transparent 1px, 
+                    transparent 5px
+                );
+            background-size: 100% 100%, 5px 5px;
+        }
+
+        /* 活動名稱/時間區塊，點擊此處連結至地圖 */
+        .activity-name-time-map {
+            cursor: pointer;
+            transition: color 0.2s;
+            flex-grow: 1;
+            /* 讓時間和文本區域水平對齊 */
+            display: flex;
+            align-items: center;
+        }
+        
+        /* 調整滑鼠懸停時的文字顏色 */
+        .activity-name-time-map:hover .activity-text-zh {
+            color: #4f46e5; /* indigo-600 */
+        }
+
+        /* 隱藏非當前日期的內容 */
+        .day-card-container {
+            display: none;
+            animation: fadeIn 0.5s ease-out;
+        }
+        .day-card-container.active {
+            display: block;
+        }
+
+        /* 景點介紹按鈕樣式優化，確保一行顯示 */
+        .gemini-tip-btn {
+            white-space: nowrap; /* 強制不換行 */
+            min-width: fit-content;
+            margin-left: 8px; /* 與 activity-name-time-map 留出間隔 */
+        }
+        
+        /* 中英文字體堆疊樣式 */
+        .activity-text-stack {
+            line-height: 1.2;
+            margin-right: 8px; /* 與地圖圖標留出間隔 */
+        }
+        .activity-text-en {
+            font-size: 0.9em;
+            color: #6b7280; /* 較淺的灰色，作為副標題 */
+        }
+
+        /* 新增的分隔線樣式 */
+        .section-divider {
+            position: relative;
+            text-align: center;
+            margin: 20px 0;
+            color: #9ca3af; /* 灰色文字 */
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .section-divider::before,
+        .section-divider::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 40%;
+            height: 1px;
+            background: #e5e7eb; /* 淺灰色線條 */
+        }
+        .section-divider::before {
+            left: 0;
+        }
+        .section-divider::after {
+            right: 0;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-10">
+
+    <div class="max-w-4xl mx-auto">
+        <!-- 頂部標題區 -->
+        <header class="text-center mb-10">
+            <!-- Lofiland Logo：使用 Lucide Icon 和品牌名稱 -->
+            <div class="flex justify-center items-center mb-4">
+                <i data-lucide="mountain" class="w-8 h-8 text-indigo-600 mr-2"></i> 
+                <span class="text-2xl font-bold text-gray-800 tracking-wider">Lofiland</span>
+            </div>
+            
+            <h1 class="text-4xl md:text-5xl font-extrabold text-gray-800 tracking-tight">
+                🇹🇼 Taiwan Deep Travel
+            </h1>
+            <p class="text-gray-500 mt-2">感受新世代農場、體驗特色景點、享受在地美食、欣賞山間美景</p>
+        </header>
+
+        <!-- 總覽與日曆切換 (12/XX 格式) -->
+        <div class="flex justify-center items-center space-x-2 md:space-x-4 mb-8 overflow-x-auto p-2">
+            <div id="calendar-nav" class="flex space-x-2">
+                <!-- 日曆導航項目將由 JavaScript 動態生成 -->
+            </div>
+        </div>
+
+        <!-- 行程內容區 -->
+        <main id="schedule-display" class="relative">
+            
+            <!-- 行程卡片 (Day 1) -->
+            <div id="day-1" class="day-card-container active">
+                <div class="bg-white rounded-[24px] shadow-xl overflow-hidden p-6 md:p-10">
+                    
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="text-4xl font-bold text-gray-800 leading-none">
+                            <span class="block text-2xl text-gray-500 font-normal mb-1">Day 01</span>
+                            12/15
+                        </div>
+                        <div class="px-4 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-semibold shadow-md">苗栗</div>
+                    </div>
+                    
+                    <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 border-b pb-4">自然生態與光影體驗</h2>
+                    
+                    <div class="space-y-4">
+                        <!-- Activity 1.1 -->
+                        <div class="activity-item" data-location="Lofi Land Rager Tour" id="act-1-1">
+                            <div class="flex items-center justify-between">
+                                <div class="activity-name-time-map">
+                                    <span class="text-sm font-semibold text-orange-500 mr-3">下午</span>
+                                    <div class="activity-text-stack flex flex-col items-start">
+                                        <span class="activity-text-zh text-lg text-gray-700">自然圈遊程 (探險國度)</span>
+                                        <span class="activity-text-en text-sm text-gray-500">Lofi Land Rager Tour</span>
+                                    </div>
+                                    <i data-lucide="map-pin" class="inline w-4 h-4 text-gray-400 ml-2"></i>
+                                </div>
+                                <button data-activity-id="act-1-1" class="gemini-tip-btn px-3 py-1 bg-indigo-500 text-white text-xs font-semibold rounded-full shadow-md hover:bg-indigo-700 transition duration-150">
+                                    景點介紹
+                                </button>
+                            </div>
+                            <div class="gemini-tip-area mt-2 p-3 bg-indigo-50 rounded-lg text-sm text-gray-600 hidden" id="tip-act-1-1"></div>
+                        </div>
+                        <!-- Activity 1.2 (花露農場 Check-in - 從住宿區塊移入) -->
+                        <div class="activity-item" data-location="Flower Home" id="act-1-2">
+                            <div class="flex items-center justify-between">
+                                <div class="activity-name-time-map">
+                                    <span class="text-sm font-semibold text-orange-500 mr-3">下午</span>
+                                    <div class="activity-text-stack flex flex-col items-start">
+                                        <span class="activity-text-zh text-lg text-gray-700">花露農場 (Check-in)</span>
+                                        <span class="activity-text-en text-sm text-gray-500">Flower Home</span>
+                                    </div>
+                                    <i data-lucide="map-pin" class="inline w-4 h-4 text-gray-400 ml-2"></i>
+                                </div>
+                                <button data-activity-id="act-1-2" class="gemini-tip-btn px-3 py-1 bg-indigo-500 text-white text-xs font-semibold rounded-full shadow-md hover:bg-indigo-700 transition duration-150">
+                                    景點介紹
+                                </button>
+                            </div>
+                            <div class="gemini-tip-area mt-2 p-3 bg-indigo-50 rounded-lg text-sm text-gray-600 hidden" id="tip-act-1-2"></div>
+                        </div>
+                        <!-- Activity 1.3 -->
+                        <div class="activity-item" data-location="Lofi Land Senscape" id="act-1-3">
+                            <div class="flex items-center justify-between">
+                                <div class="activity-name-time-map">
+                                    <span class="text-sm font-semibold text-orange-500 mr-3">晚上</span>
+                                    <div class="activity-text-stack flex flex-col items-start">
+                                        <span class="activity-text-zh text-lg text-gray-700">自然圈夜間光影館</span>
+                                        <span class="activity-text-en text-sm text-gray-500">Lofi Land Senscape</span>
+                                    </div>
+                                    <i data-lucide="map-pin" class="inline w-4 h-4 text-gray-400 ml-2"></i>
+                                </div>
+                                <button data-activity-id="act-1-3" class="gemini-tip-btn px-3 py-1 bg-indigo-500 text-white text-xs font-semibold rounded-full shadow-md hover:bg-indigo-700 transition duration-150">
+                                    景點介紹
+                                </button>
+                            </div>
+                            <div class="gemini-tip-area mt-2 p-3 bg-indigo-50 rounded-lg text-sm text-gray-600 hidden" id="tip-act-1-3"></div>
+                        </div>
+                    </div>
+
+                    <!-- ACCOMMODATION DAY 1 -->
+                    <div class="mt-8 pt-4 border-t-2 border-gray-200 bg-gray-50 p-4 rounded-xl shadow-inner">
+                        <h3 class="text-xl font-bold text-indigo-700 mb-3 flex items-center">
+                            <i data-lucide="bed" class="w-5 h-5 mr-2"></i> 今日住宿 (Accommodation)
+                        </h3>
+                        <div class="activity-item flex items-center justify-between" data-location="Flower Home" id="acc-1">
+                            <div class="activity-name-time-map">
+                                <span class="text-sm font-semibold text-orange-500 mr-3">當晚</span>
+                                <div class="activity-text-stack flex flex-col items-start">
+                                    <span class="activity-text-zh text-lg text-gray-700">花露農場</span>
+                                    <span class="activity-text-en text-sm text-gray-500">Flower Home</span>
+                                </div>
+                                <i data-lucide="map-pin" class="inline w-4 h-4 text-gray-400 ml-2"></i>
+                            </div>
+                            <button data-activity-id="acc-1" class="gemini-tip-btn px-3 py-1 bg-indigo-500 text-white text-xs font-semibold rounded-full shadow-md hover:bg-indigo-700 transition duration-150">
+                                景點介紹
+                            </button>
+                        </div>
+                        <div class="gemini-tip-area mt-2 p-3 bg-indigo-100 rounded-lg text-sm text-gray-600 hidden" id="tip-acc-1"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 行程卡片 (Day 2) -->
+            <div id="day-2" class="day-card-container">
+                <div class="bg-white rounded-[24px] shadow-xl overflow-hidden p-6 md:p-10">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="text-4xl font-bold text-gray-800 leading-none">
+                            <span class="block text-2xl text-gray-500 font-normal mb-1">Day 02</span>
+                            12/16
+                        </div>
+                        <div class="px-4 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-semibold shadow-md">苗栗</div>
+                    </div>
+                    <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 border-b pb-4">客家文化、鐵道與溫泉</h2>
+                    <div class="space-y-4">
+                        <!-- Activity 2.1 -->
+                        <div class="activity-item" data-location="Strawberry Picking" id="act-2-1">
+                            <div class="flex items-center justify-between">
+                                <div class="activity-name-time-map">
+                                    <span class="text-sm font-semibold text-orange-500 mr-3">上午</span>
+                                    <div class="activity-text-stack flex flex-col items-start">
+                                        <span class="activity-text-zh text-lg text-gray-700">採草莓 (大湖)</span>
+                                        <span class="activity-text-en text-sm text-gray-500">Strawberry Picking</span>
+                                    </div>
+                                    <i data-lucide="map-pin" class="inline w-4 h-4 text-gray-400 ml-2"></i>
+                                </div>
+                                <button data-activity-id="act-2-1" class="gemini-tip-btn px-3 py-1 bg-indigo-500 text-white text-xs font-semibold rounded-full shadow-md hover:bg-indigo-700 transition duration-150">
+                                    景點介紹
+                                </button>
+                            </div>
+                            <div class="gemini-tip-area mt-2 p-3 bg-indigo-50 rounded-lg text-sm text-gray-600 hidden" id="tip-act-2-1"></div>
+                        </div>
+                        <!-- Activity 2.2 -->
+                        <div class="activity-item" data-location="Three Generation Hakka Restaurant" id="act-2-2">
+                            <div class="flex items-center justify-between">
+                                <div class="activity-name-time-map">
+                                    <span class="text-sm font-semibold text-orange-500 mr-3">中午</span>
+                                    <div class="activity-text-stack flex flex-col items-start">
+                                        <span class="activity-text-zh text-lg text-gray-700">三代堂客家料理</span>
+                                        <span class="activity-text-en text-sm text-gray-500">Three Generation Hakka Restaurant</span>
+                                    </div>
+                                    <i data-lucide="map-pin" class="inline w-4 h-4 text-gray-400 ml-2"></i>
+                                </div>
+                                <button data-activity-id="act-2-2" class="gemini-tip-btn px-3 py-1 bg-indigo-500 text-white text-xs font-semibold rounded-full shadow-md hover:bg-indigo-700 transition duration-150">
+                                    景點介紹
+                                </button>
+                            </div>
+                            <div class="gemini-tip-area mt-2 p-3 bg-indigo-50 rounded-lg text-sm text-gray-600 hidden" id="tip-act-2-2"></div>
+                        </div>
+                        <!-- Activity 2.3 -->
+                        <div class="activity-item" data-location="Rail Bike & Shengsing Station" id="act-2-3">
+                            <div class="flex items-center justify-between">
+                                <div class="activity-name-time-map">
+                                    <span class="text-sm font-semibold text-orange-500 mr-3">下午</span>
+                                    <div class="activity-text-stack flex flex-col items-start">
+                                        <span class="activity-text-zh text-lg text-gray-700">鐵道自行車 & 勝興車站</span>
+                                        <span class="activity-text-en text-sm text-gray-500">Rail Bike & Shengsing Station</span>
+                                    </div>
+                                    <i data-lucide="map-pin" class="inline w-4 h-4 text-gray-400 ml-2"></i>
+                                </div>
+                                <button data-activity-id="act-2-3" class="gemini-tip-btn px-3 py-1 bg-indigo-500 text-white text-xs font-semibold rounded-full shadow-md hover:bg-indigo-700 transition duration-150">
+                                    景點介紹
+                                </button>
+                            </div>
+                            <div class="gemini-tip-area mt-2 p-3 bg-indigo-50 rounded-lg text-sm text-gray-600 hidden" id="tip-act-2-3"></div>
+                        </div>
+                        <!-- Activity 2.4 (Starbucks) -->
+                        <div class="activity-item" data-location="Starbucks Yuanli Rice Field Store" id="act-2-4">
+                            <div class="flex items-center justify-between">
+                                <div class="activity-name-time-map">
+                                    <span class="text-sm font-semibold text-orange-500 mr-3">傍晚</span>
+                                    <div class="activity-text-stack flex flex-col items-start">
+                                        <span class="activity-text-zh text-lg text-gray-700">星巴克 苑裡稻香特色門市</span>
+                                        <span class="activity-text-en text-sm text-gray-500">Starbucks Yuanli Rice Field Store</span>
+                                    </div>
+                                    <i data-lucide="map-pin" class="inline w-4 h-4 text-gray-400 ml-2"></i>
+                                </div>
+                                <button data-activity-id="act-2-4" class="gemini-tip-btn px-3 py-1 bg-indigo-500 text-white text-xs font-semibold rounded-full shadow-md hover:bg-indigo-700 transition duration-150">
+                                    景點介紹
+                                </button>
+                            </div>
+                            <div class="gemini-tip-area mt-2 p-3 bg-indigo-50 rounded-lg text-sm text-gray-600 hidden" id="tip-act-2-4"></div>
+                        </div>
+                    </div>
+
+                    <!-- ACCOMMODATION DAY 2 -->
+                    <div class="mt-8 pt-4 border-t-2 border-gray-200 bg-gray-50 p-4 rounded-xl shadow-inner">
+                        <h3 class="text-xl font-bold text-indigo-700 mb-3 flex items-center">
+                            <i data-lucide="bed" class="w-5 h-5 mr-2"></i> 今日住宿 (Accommodation)
+                        </h3>
+                        <div class="activity-item flex items-center justify-between" data-location="Shinemood Resort" id="acc-2">
+                            <div class="activity-name-time-map">
+                                <span class="text-sm font-semibold text-orange-500 mr-3">晚上</span>
+                                <div class="activity-text-stack flex flex-col items-start">
+                                    <span class="activity-text-zh text-lg text-gray-700">享沐時光莊園渡假酒店</span>
+                                    <span class="activity-text-en text-sm text-gray-500">Shinemood Resort</span>
+                                </div>
+                                <i data-lucide="map-pin" class="inline w-4 h-4 text-gray-400 ml-2"></i>
+                            </div>
+                            <button data-activity-id="acc-2" class="gemini-tip-btn px-3 py-1 bg-indigo-500 text-white text-xs font-semibold rounded-full shadow-md hover:bg-indigo-700 transition duration-150">
+                                景點介紹
+                            </button>
+                        </div>
+                        <div class="gemini-tip-area mt-2 p-3 bg-indigo-100 rounded-lg text-sm text-gray-600 hidden" id="tip-acc-2"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 行程卡片 (Day 3) -->
+            <div id="day-3" class="day-card-container">
+                <div class="bg-white rounded-[24px] shadow-xl overflow-hidden p-6 md:p-10">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="text-4xl font-bold text-gray-800 leading-none">
+                            <span class="block text-2xl text-gray-500 font-normal mb-1">Day 03</span>
+                            12/17
+                        </div>
+                        <div class="px-4 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-semibold shadow-md">台中/彰化</div>
+                    </div>
+                    <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 border-b pb-4">美食與夜市精華</h2>
+                    <div class="space-y-4">
+                        <!-- Activity 3.1 -->
+                        <div class="activity-item" data-location="Rainbow Village" id="act-3-1">
+                            <div class="flex items-center justify-between">
+                                <div class="activity-name-time-map">
+                                    <span class="text-sm font-semibold text-orange-500 mr-3">上午</span>
+                                    <div class="activity-text-stack flex flex-col items-start">
+                                        <span class="activity-text-zh text-lg text-gray-700">彩虹眷村 (拍照景點)</span>
+                                        <span class="activity-text-en text-sm text-gray-500">Rainbow Village</span>
+                                    </div>
+                                    <i data-lucide="map-pin" class="inline w-4 h-4 text-gray-400 ml-2"></i>
+                                </div>
+                                <button data-activity-id="act-3-1" class="gemini-tip-btn px-3 py-1 bg-indigo-500 text-white text-xs font-semibold rounded-full shadow-md hover:bg-indigo-700 transition duration-150">
+                                    景點介紹
+                                </button>
+                            </div>
+                            <div class="gemini-tip-area mt-2 p-3 bg-indigo-50 rounded-lg text-sm text-gray-600 hidden" id="tip-act-3-1"></div>
+                        </div>
+
+                        <!-- 交通分隔線: 彰化 -->
+                        <div class="section-divider">前往 彰化 (Changhua)</div>
+                        
+                        <!-- Activity 3.2 -->
+                        <div class="activity-item" data-location="Chef André's A-Quan Braised Pork Rice" id="act-3-2">
+                            <div class="flex items-center justify-between">
+                                <div class="activity-name-time-map">
+                                    <span class="text-sm font-semibold text-orange-500 mr-3">中午</span>
+                                    <div class="activity-text-stack flex flex-col items-start">
+                                        <span class="activity-text-zh text-lg text-gray-700">阿泉控肉飯 & 木瓜牛奶</span>
+                                        <span class="activity-text-en text-sm text-gray-500">A-Quan Braised Pork Rice & Papaya Milk</span>
+                                    </div>
+                                    <i data-lucide="map-pin" class="inline w-4 h-4 text-gray-400 ml-2"></i>
+                                </div>
+                                <button data-activity-id="act-3-2" class="gemini-tip-btn px-3 py-1 bg-indigo-500 text-white text-xs font-semibold rounded-full shadow-md hover:bg-indigo-700 transition duration-150">
+                                    景點介紹
+                                </button>
+                            </div>
+                            <div class="gemini-tip-area mt-2 p-3 bg-indigo-50 rounded-lg text-sm text-gray-600 hidden" id="tip-act-3-2"></div>
+                        </div>
+                        
+                        <!-- 交通分隔線: 回台中 -->
+                        <div class="section-divider">返回 台中 (Taichung)</div>
+
+                        <!-- Activity 3.3 -->
+                        <div class="activity-item" data-location="Miyahara Ice Cream Taichung" id="act-3-3">
+                            <div class="flex items-center justify-between">
+                                <div class="activity-name-time-map">
+                                    <span class="text-sm font-semibold text-orange-500 mr-3">下午</span>
+                                    <div class="activity-text-stack flex flex-col items-start">
+                                        <span class="activity-text-zh text-lg text-gray-700">台中 宮原眼科 (甜點)</span>
+                                        <span class="activity-text-en text-sm text-gray-500">Miyahara Ice Cream (Taichung)</span>
+                                    </div>
+                                    <i data-lucide="map-pin" class="inline w-4 h-4 text-gray-400 ml-2"></i>
+                                </div>
+                                <button data-activity-id="act-3-3" class="gemini-tip-btn px-3 py-1 bg-indigo-500 text-white text-xs font-semibold rounded-full shadow-md hover:bg-indigo-700 transition duration-150">
+                                    景點介紹
+                                </button>
+                            </div>
+                            <div class="gemini-tip-area mt-2 p-3 bg-indigo-50 rounded-lg text-sm text-gray-600 hidden" id="tip-act-3-3"></div>
+                        </div>
+                        <!-- Activity 3.4 -->
+                        <div class="activity-item" data-location="Feng Chia Night Market" id="act-3-4">
+                            <div class="flex items-center justify-between">
+                                <div class="activity-name-time-map">
+                                    <span class="text-sm font-semibold text-orange-500 mr-3">晚上</span>
+                                    <div class="activity-text-stack flex flex-col items-start">
+                                        <span class="activity-text-zh text-lg text-gray-700">逢甲夜市</span>
+                                        <span class="activity-text-en text-sm text-gray-500">Feng Chia Night Market</span>
+                                    </div>
+                                    <i data-lucide="map-pin" class="inline w-4 h-4 text-gray-400 ml-2"></i>
+                                </div>
+                                <button data-activity-id="act-3-4" class="gemini-tip-btn px-3 py-1 bg-indigo-500 text-white text-xs font-semibold rounded-full shadow-md hover:bg-indigo-700 transition duration-150">
+                                    景點介紹
+                                </button>
+                            </div>
+                            <div class="gemini-tip-area mt-2 p-3 bg-indigo-50 rounded-lg text-sm text-gray-600 hidden" id="tip-act-3-4"></div>
+                        </div>
+                    </div>
+
+                    <!-- ACCOMMODATION DAY 3 -->
+                    <div class="mt-8 pt-4 border-t-2 border-gray-200 bg-gray-50 p-4 rounded-xl shadow-inner">
+                        <h3 class="text-xl font-bold text-indigo-700 mb-3 flex items-center">
+                            <i data-lucide="bed" class="w-5 h-5 mr-2"></i> 今日住宿 (Accommodation)
+                        </h3>
+                        <div class="activity-item flex items-center justify-between" data-location="Feng Chia Night Market Stay" id="acc-3">
+                            <div class="activity-name-time-map">
+                                <span class="text-sm font-semibold text-orange-500 mr-3">晚上</span>
+                                <div class="activity-text-stack flex flex-col items-start">
+                                    <span class="activity-text-zh text-lg text-gray-700">逢甲夜市附近住宿</span>
+                                    <span class="activity-text-en text-sm text-gray-500">Feng Chia Night Market Area Stay</span>
+                                </div>
+                                <i data-lucide="map-pin" class="inline w-4 h-4 text-gray-400 ml-2"></i>
+                            </div>
+                            <button data-activity-id="acc-3" class="gemini-tip-btn px-3 py-1 bg-indigo-500 text-white text-xs font-semibold rounded-full shadow-md hover:bg-indigo-700 transition duration-150">
+                                景點介紹
+                            </button>
+                        </div>
+                        <div class="gemini-tip-area mt-2 p-3 bg-indigo-100 rounded-lg text-sm text-gray-600 hidden" id="tip-acc-3"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 行程卡片 (Day 4) -->
+            <div id="day-4" class="day-card-container">
+                <div class="bg-white rounded-[24px] shadow-xl overflow-hidden p-6 md:p-10">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="text-4xl font-bold text-gray-800 leading-none">
+                            <span class="block text-2xl text-gray-500 font-normal mb-1">Day 04</span>
+                            12/18
+                        </div>
+                        <div class="px-4 py-1 bg-green-100 text-green-700 rounded-full text-sm font-semibold shadow-md">嘉義</div>
+                    </div>
+                    <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 border-b pb-4">嘉義歷史與茶園夜景</h2>
+                    <div class="space-y-4">
+                        <!-- Activity 4.1 -->
+                        <div class="activity-item" data-location="Chiayi Showa J18 Historic Site" id="act-4-1">
+                            <div class="flex items-center justify-between">
+                                <div class="activity-name-time-map">
+                                    <span class="text-sm font-semibold text-orange-500 mr-3">上午</span>
+                                    <div class="activity-text-stack flex flex-col items-start">
+                                        <span class="activity-text-zh text-lg text-gray-700">昭和十八 J18 (日式建築)</span>
+                                        <span class="activity-text-en text-sm text-gray-500">Chiayi Showa J18 (Historic Site)</span>
+                                    </div>
+                                    <i data-lucide="map-pin" class="inline w-4 h-4 text-gray-400 ml-2"></i>
+                                </div>
+                                <button data-activity-id="act-4-1" class="gemini-tip-btn px-3 py-1 bg-indigo-500 text-white text-xs font-semibold rounded-full shadow-md hover:bg-indigo-700 transition duration-150">
+                                    景點介紹
+                                </button>
+                            </div>
+                            <div class="gemini-tip-area mt-2 p-3 bg-indigo-50 rounded-lg text-sm text-gray-600 hidden" id="tip-act-4-1"></div>
+                        </div>
+                        <!-- Activity 4.2 -->
+                        <div class="activity-item" data-location="Chiayi Turkey Rice" id="act-4-2">
+                            <div class="flex items-center justify-between">
+                                <div class="activity-name-time-map">
+                                    <span class="text-sm font-semibold text-orange-500 mr-3">中午</span>
+                                    <div class="activity-text-stack flex flex-col items-start">
+                                        <span class="activity-text-zh text-lg text-gray-700">嘉義火雞肉飯 (午餐)</span>
+                                        <span class="activity-text-en text-sm text-gray-500">Chiayi Turkey Rice</span>
+                                    </div>
+                                    <i data-lucide="map-pin" class="inline w-4 h-4 text-gray-400 ml-2"></i>
+                                </div>
+                                <button data-activity-id="act-4-2" class="gemini-tip-btn px-3 py-1 bg-indigo-500 text-white text-xs font-semibold rounded-full shadow-md hover:bg-indigo-700 transition duration-150">
+                                    景點介紹
+                                </button>
+                            </div>
+                            <div class="gemini-tip-area mt-2 p-3 bg-indigo-50 rounded-lg text-sm text-gray-600 hidden" id="tip-act-4-2"></div>
+                        </div>
+                        <!-- Activity 4.3 -->
+                        <div class="activity-item" data-location="Xiding Viewing Deck" id="act-4-3">
+                            <div class="flex items-center justify-between">
+                                <div class="activity-name-time-map">
+                                    <span class="text-sm font-semibold text-orange-500 mr-3">下午</span>
+                                    <div class="activity-text-stack flex flex-col items-start">
+                                        <span class="activity-text-zh text-lg text-gray-700">隙頂觀景臺 (日落/雲海)</span>
+                                        <span class="activity-text-en text-sm text-gray-500">Xiding Viewing Deck</span>
+                                    </div>
+                                    <i data-lucide="map-pin" class="inline w-4 h-4 text-gray-400 ml-2"></i>
+                                </div>
+                                <button data-activity-id="act-4-3" class="gemini-tip-btn px-3 py-1 bg-indigo-500 text-white text-xs font-semibold rounded-full shadow-md hover:bg-indigo-700 transition duration-150">
+                                    景點介紹
+                                </button>
+                            </div>
+                            <div class="gemini-tip-area mt-2 p-3 bg-indigo-50 rounded-lg text-sm text-gray-600 hidden" id="tip-act-4-3"></div>
+                        </div>
+                    </div>
+
+                    <!-- ACCOMMODATION DAY 4 -->
+                    <div class="mt-8 pt-4 border-t-2 border-gray-200 bg-gray-50 p-4 rounded-xl shadow-inner">
+                        <h3 class="text-xl font-bold text-indigo-700 mb-3 flex items-center">
+                            <i data-lucide="bed" class="w-5 h-5 mr-2"></i> 今日住宿 (Accommodation)
+                        </h3>
+                        <div class="activity-item flex items-center justify-between" data-location="Long Yun Farm" id="acc-4">
+                            <div class="activity-name-time-map">
+                                <span class="text-sm font-semibold text-orange-500 mr-3">晚上</span>
+                                <div class="activity-text-stack flex flex-col items-start">
+                                    <span class="activity-text-zh text-lg text-gray-700">龍雲農場 (住宿)</span>
+                                    <span class="activity-text-en text-sm text-gray-500">Long Yun Farm</span>
+                                </div>
+                                <i data-lucide="map-pin" class="inline w-4 h-4 text-gray-400 ml-2"></i>
+                            </div>
+                            <button data-activity-id="acc-4" class="gemini-tip-btn px-3 py-1 bg-indigo-500 text-white text-xs font-semibold rounded-full shadow-md hover:bg-indigo-700 transition duration-150">
+                                景點介紹
+                            </button>
+                        </div>
+                        <div class="gemini-tip-area mt-2 p-3 bg-indigo-100 rounded-lg text-sm text-gray-600 hidden" id="tip-acc-4"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 行程卡片 (Day 5) -->
+            <div id="day-5" class="day-card-container">
+                <div class="bg-white rounded-[24px] shadow-xl overflow-hidden p-6 md:p-10">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="text-4xl font-bold text-gray-800 leading-none">
+                            <span class="block text-2xl text-gray-500 font-normal mb-1">Day 05</span>
+                            12/19
+                        </div>
+                        <div class="px-4 py-1 bg-green-200 text-green-800 rounded-full text-sm font-semibold shadow-md">阿里山</div>
+                    </div>
+                    <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 border-b pb-4">阿里山森林與小火車</h2>
+                    <div class="space-y-4">
+                        <!-- Activity 5.1 -->
+                        <div class="activity-item" data-location="Fenqihu Historic Town" id="act-5-1">
+                            <div class="flex items-center justify-between">
+                                <div class="activity-name-time-map">
+                                    <span class="text-sm font-semibold text-orange-500 mr-3">上午</span>
+                                    <div class="activity-text-stack flex flex-col items-start">
+                                        <span class="activity-text-zh text-lg text-gray-700">奮起湖老街 (便當)</span>
+                                        <span class="activity-text-en text-sm text-gray-500">Fenqihu Historic Town</span>
+                                    </div>
+                                    <i data-lucide="map-pin" class="inline w-4 h-4 text-gray-400 ml-2"></i>
+                                </div>
+                                <button data-activity-id="act-5-1" class="gemini-tip-btn px-3 py-1 bg-indigo-500 text-white text-xs font-semibold rounded-full shadow-md hover:bg-indigo-700 transition duration-150">
+                                    景點介紹
+                                </button>
+                            </div>
+                            <div class="gemini-tip-area mt-2 p-3 bg-indigo-50 rounded-lg text-sm text-gray-600 hidden" id="tip-act-5-1"></div>
+                        </div>
+                        <!-- Activity 5.2 -->
+                        <div class="activity-item" data-location="Alishan National Forest Recreation Area" id="act-5-2">
+                            <div class="flex items-center justify-between">
+                                <div class="activity-name-time-map">
+                                    <span class="text-sm font-semibold text-orange-500 mr-3">下午</span>
+                                    <div class="activity-text-stack flex flex-col items-start">
+                                        <span class="activity-text-zh text-lg text-gray-700">阿里山國家公園 (神木/小火車)</span>
+                                        <span class="activity-text-en text-sm text-gray-500">Alishan National Forest Recreation Area</span>
+                                    </div>
+                                    <i data-lucide="map-pin" class="inline w-4 h-4 text-gray-400 ml-2"></i>
+                                </div>
+                                <button data-activity-id="act-5-2" class="gemini-tip-btn px-3 py-1 bg-indigo-500 text-white text-xs font-semibold rounded-full shadow-md hover:bg-indigo-700 transition duration-150">
+                                    景點介紹
+                                </button>
+                            </div>
+                            <div class="gemini-tip-area mt-2 p-3 bg-indigo-50 rounded-lg text-sm text-gray-600 hidden" id="tip-act-5-2"></div>
+                        </div>
+                    </div>
+
+                    <!-- ACCOMMODATION DAY 5 -->
+                    <div class="mt-8 pt-4 border-t-2 border-gray-200 bg-gray-50 p-4 rounded-xl shadow-inner">
+                        <h3 class="text-xl font-bold text-indigo-700 mb-3 flex items-center">
+                            <i data-lucide="bed" class="w-5 h-5 mr-2"></i> 今日住宿 (Accommodation)
+                        </h3>
+                        <div class="activity-item flex items-center justify-between" data-location="Chiayi Jianan Fanhua Hotel" id="acc-5">
+                            <div class="activity-name-time-map">
+                                <span class="text-sm font-semibold text-orange-500 mr-3">晚上</span>
+                                <div class="activity-text-stack flex flex-col items-start">
+                                    <span class="activity-text-zh text-lg text-gray-700">嘉楠風華酒店 (嘉義市區住宿)</span>
+                                    <span class="activity-text-en text-sm text-gray-500">Chiayi Jianan Fanhua Hotel</span>
+                                </div>
+                                <i data-lucide="map-pin" class="inline w-4 h-4 text-gray-400 ml-2"></i>
+                            </div>
+                            <button data-activity-id="acc-5" class="gemini-tip-btn px-3 py-1 bg-indigo-500 text-white text-xs font-semibold rounded-full shadow-md hover:bg-indigo-700 transition duration-150">
+                                景點介紹
+                            </button>
+                        </div>
+                        <div class="gemini-tip-area mt-2 p-3 bg-indigo-100 rounded-lg text-sm text-gray-600 hidden" id="tip-acc-5"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 行程卡片 (Day 6) -->
+            <div id="day-6" class="day-card-container">
+                <div class="bg-white rounded-[24px] shadow-xl overflow-hidden p-6 md:p-10">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="text-4xl font-bold text-gray-800 leading-none">
+                            <span class="block text-2xl text-gray-500 font-normal mb-1">Day 06</span>
+                            12/20
+                        </div>
+                        <div class="px-4 py-1 bg-red-100 text-red-700 rounded-full text-sm font-semibold shadow-md">鹿港/新竹</div>
+                    </div>
+                    <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 border-b pb-4">鹿港古鎮與新竹夜宿</h2>
+                    <div class="space-y-4">
+                        <!-- Activity 6.1 -->
+                        <div class="activity-item" data-location="Lukang Tianhou Temple" id="act-6-1">
+                            <div class="flex items-center justify-between">
+                                <div class="activity-name-time-map">
+                                    <span class="text-sm font-semibold text-orange-500 mr-3">上午</span>
+                                    <div class="activity-text-stack flex flex-col items-start">
+                                        <span class="activity-text-zh text-lg text-gray-700">鹿港天后宮 & 老街小吃</span>
+                                        <span class="activity-text-en text-sm text-gray-500">Lukang Tianhou Temple</span>
+                                    </div>
+                                    <i data-lucide="map-pin" class="inline w-4 h-4 text-gray-400 ml-2"></i>
+                                </div>
+                                <button data-activity-id="act-6-1" class="gemini-tip-btn px-3 py-1 bg-indigo-500 text-white text-xs font-semibold rounded-full shadow-md hover:bg-indigo-700 transition duration-150">
+                                    景點介紹
+                                </button>
+                            </div>
+                            <div class="gemini-tip-area mt-2 p-3 bg-indigo-50 rounded-lg text-sm text-gray-600 hidden" id="tip-act-6-1"></div>
+                        </div>
+                    </div>
+
+                    <!-- ACCOMMODATION DAY 6 -->
+                    <div class="mt-8 pt-4 border-t-2 border-gray-200 bg-gray-50 p-4 rounded-xl shadow-inner">
+                        <h3 class="text-xl font-bold text-indigo-700 mb-3 flex items-center">
+                            <i data-lucide="bed" class="w-5 h-5 mr-2"></i> 今日住宿 (Accommodation)
+                        </h3>
+                        <div class="activity-item flex items-center justify-between" data-location="Lakeshore Hotel Hsinchu" id="acc-6">
+                            <div class="activity-name-time-map">
+                                <span class="text-sm font-semibold text-orange-500 mr-3">下午/晚上</span>
+                                <div class="activity-text-stack flex flex-col items-start">
+                                    <span class="activity-text-zh text-lg text-gray-700">煙波大飯店 新竹湖濱館</span>
+                                    <span class="activity-text-en text-sm text-gray-500">Lakeshore Hotel Hsinchu</span>
+                                </div>
+                                <i data-lucide="map-pin" class="inline w-4 h-4 text-gray-400 ml-2"></i>
+                            </div>
+                            <button data-activity-id="acc-6" class="gemini-tip-btn px-3 py-1 bg-indigo-500 text-white text-xs font-semibold rounded-full shadow-md hover:bg-indigo-700 transition duration-150">
+                                景點介紹
+                            </button>
+                        </div>
+                        <div class="gemini-tip-area mt-2 p-3 bg-indigo-100 rounded-lg text-sm text-gray-600 hidden" id="tip-acc-6"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 行程卡片 (Day 7) -->
+            <div id="day-7" class="day-card-container">
+                <div class="bg-white rounded-[24px] shadow-xl overflow-hidden p-6 md:p-10">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="text-4xl font-bold text-gray-800 leading-none">
+                            <span class="block text-2xl text-gray-500 font-normal mb-1">Day 07</span>
+                            12/21
+                        </div>
+                        <div class="px-4 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold shadow-md">新竹/台北</div>
+                    </div>
+                    <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6 border-b pb-4">新竹美食與賦歸台北</h2>
+                    <div class="space-y-4">
+                        <!-- Activity 7.1 -->
+                        <div class="activity-item" data-location="Hsinchu City God Temple Old Street" id="act-7-1">
+                            <div class="flex items-center justify-between">
+                                <div class="activity-name-time-map">
+                                    <span class="text-sm font-semibold text-orange-500 mr-3">上午</span>
+                                    <div class="activity-text-stack flex flex-col items-start">
+                                        <span class="activity-text-zh text-lg text-gray-700">城隍廟老街 (午餐)</span>
+                                        <span class="activity-text-en text-sm text-gray-500">Hsinchu City God Temple Old Street</span>
+                                    </div>
+                                    <i data-lucide="map-pin" class="inline w-4 h-4 text-gray-400 ml-2"></i>
+                                </div>
+                                <button data-activity-id="act-7-1" class="gemini-tip-btn px-3 py-1 bg-indigo-500 text-white text-xs font-semibold rounded-full shadow-md hover:bg-indigo-700 transition duration-150">
+                                    景點介紹
+                                </button>
+                            </div>
+                            <div class="gemini-tip-area mt-2 p-3 bg-indigo-50 rounded-lg text-sm text-gray-600 hidden" id="tip-act-7-1"></div>
+                        </div>
+                        <!-- Activity 7.2 -->
+                        <div class="activity-item" data-location="Taipei" id="act-7-2">
+                            <div class="flex items-center justify-between">
+                                <div class="activity-name-time-map">
+                                    <span class="text-sm font-semibold text-orange-500 mr-3">下午</span>
+                                    <div class="activity-text-stack flex flex-col items-start">
+                                        <span class="activity-text-zh text-lg text-gray-700">返回 Taipei</span>
+                                        <span class="activity-text-en text-sm text-gray-500">Return to Taipei</span>
+                                    </div>
+                                    <i data-lucide="map-pin" class="inline w-4 h-4 text-gray-400 ml-2"></i>
+                                </div>
+                                <button data-activity-id="act-7-2" class="gemini-tip-btn px-3 py-1 bg-indigo-500 text-white text-xs font-semibold rounded-full shadow-md hover:bg-indigo-700 transition duration-150">
+                                    景點介紹
+                                </button>
+                            </div>
+                            <div class="gemini-tip-area mt-2 p-3 bg-indigo-50 rounded-lg text-sm text-gray-600 hidden" id="tip-act-7-2"></div>
+                        </div>
+                    </div>
+
+                    <!-- ACCOMMODATION DAY 7 (無住宿) -->
+                    <div class="mt-8 pt-4 border-t-2 border-gray-200 bg-gray-50 p-4 rounded-xl shadow-inner text-center text-gray-500">
+                        <i data-lucide="home" class="w-5 h-5 inline mr-2"></i> 今日無住宿，準備返家。
+                    </div>
+                </div>
+            </div>
+            
+        </main>
+
+        <!-- 底部導航按鈕 -->
+        <div class="flex justify-between items-center mt-8">
+            <button id="prev-day" class="flex items-center text-gray-600 hover:text-indigo-600 transition duration-200 disabled:opacity-50">
+                <i data-lucide="arrow-left" class="w-5 h-5 mr-2"></i> 上一天
+            </button>
+            <div class="text-lg font-bold text-gray-700" id="current-day-label"></div>
+            <button id="next-day" class="flex items-center text-gray-600 hover:text-indigo-600 transition duration-200 disabled:opacity-50">
+                下一天 <i data-lucide="arrow-right" class="w-5 h-5 ml-2"></i>
+            </button>
+        </div>
+        
+        <footer class="text-center text-gray-400 mt-16 text-sm">
+            <p>&copy; 2025 Lofiland. 點擊行程名稱可查看地圖。</p>
+        </footer>
+    </div>
+
+    <script>
+        // --- Gemini API Configuration & Utilities ---
+        const apiKey = ""; // API key is provided at runtime
+        const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent";
+        const MAX_RETRIES = 5;
+
+        // Utility function for exponential backoff
+        async function fetchWithRetry(url, options, retries = 0) {
+            try {
+                const response = await fetch(url, options);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response;
+            } catch (error) {
+                if (retries < MAX_RETRIES) {
+                    const delay = Math.pow(2, retries) * 1000 + Math.random() * 1000;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return fetchWithRetry(url, options, retries + 1);
+                } else {
+                    console.error("Gemini API failed after multiple retries:", error);
+                    throw new Error("無法連接 Gemini 服務，請稍後再試。");
+                }
+            }
+        }
+
+        async function fetchGeminiTip(locationName) {
+            // 提示 LLM 提供景點介紹，更符合新的按鈕文字
+            const userQuery = `為這個台灣景點/美食地點：「${locationName}」，提供一個簡短、有吸引力的景點介紹或特色介紹（約30-50字）。重點在於歷史、文化或獨特體驗。`;
+            
+            const payload = {
+                contents: [{ parts: [{ text: userQuery }] }],
+                tools: [{ "google_search": {} }], // 啟用 Google Search 進行資訊接地
+                systemInstruction: {
+                    parts: [{ text: "Act as a friendly, concise travel guide. Provide a short, captivating introduction or interesting feature about the location, focusing on historical, cultural, or unique visitor experiences in Traditional Chinese." }]
+                },
+            };
+
+            const options = {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            };
+            
+            const url = apiKey ? `${API_URL}?key=${apiKey}` : API_URL;
+
+            try {
+                const response = await fetchWithRetry(url, options);
+                const result = await response.json();
+                
+                const text = result.candidates?.[0]?.content?.parts?.[0]?.text || "Gemini 服務未能生成結果。";
+                
+                let sources = [];
+                const groundingMetadata = result.candidates?.[0]?.groundingMetadata;
+                if (groundingMetadata && groundingMetadata.groundingAttributions) {
+                    sources = groundingMetadata.groundingAttributions
+                        .map(attribution => ({
+                            uri: attribution.web?.uri,
+                            title: attribution.web?.title,
+                        }))
+                        .filter(source => source.uri && source.title);
+                }
+                
+                return { text, sources };
+
+            } catch (error) {
+                console.error("Gemini API call failed:", error);
+                return { text: error.message || "發生未知錯誤。", sources: [] };
+            }
+        }
+        // --- END Gemini API Utilities ---
+
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // 初始化 Lucide 圖標
+            lucide.createIcons();
+
+            const totalDays = 7;
+            let currentDay = 1;
+
+            const calendarNav = document.getElementById('calendar-nav');
+            const prevButton = document.getElementById('prev-day');
+            const nextButton = document.getElementById('next-day');
+            const currentDayLabel = document.getElementById('current-day-label');
+
+            const dayDates = [
+                { day: 1, date: '12/15', label: '15' },
+                { day: 2, date: '12/16', label: '16' },
+                { day: 3, date: '12/17', label: '17' },
+                { day: 4, date: '12/18', label: '18' },
+                { day: 5, date: '12/19', label: '19' },
+                { day: 6, date: '12/20', label: '20' },
+                { day: 7, date: '12/21', label: '21' }
+            ];
+
+            // --- 導航與顯示邏輯 ---
+            
+            function updateDisplay() {
+                // 1. 隱藏所有卡片，顯示當前卡片
+                document.querySelectorAll('.day-card-container').forEach(card => {
+                    card.classList.remove('active');
+                });
+                document.getElementById(`day-${currentDay}`).classList.add('active');
+
+                // 2. 更新按鈕狀態
+                prevButton.disabled = currentDay === 1;
+                nextButton.disabled = currentDay === totalDays;
+
+                // 3. 更新日曆導航樣式
+                calendarNav.querySelectorAll('button').forEach(btn => {
+                    btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-lg');
+                    btn.classList.add('bg-white', 'text-gray-500');
+                    if (parseInt(btn.getAttribute('data-day')) === currentDay) {
+                        btn.classList.add('bg-indigo-600', 'text-white', 'shadow-lg');
+                        btn.classList.remove('bg-white', 'text-gray-500');
+                    }
+                });
+
+                // 4. 更新中央標籤
+                currentDayLabel.textContent = `Day ${currentDay} of ${totalDays}`;
+
+                // 5. 確保新的 Lucide Icons 被渲染 (針對動態加載的內容)
+                lucide.createIcons();
+            }
+
+            // --- 日曆導航生成 (12/XX 格式) ---
+            dayDates.forEach(d => {
+                const btn = document.createElement('button');
+                btn.className = `w-12 h-12 flex flex-col items-center justify-center rounded-full text-xs font-semibold transition duration-200 border border-gray-200`;
+                btn.setAttribute('data-day', d.day);
+                // 顯示 12/XX
+                btn.innerHTML = `<span class="text-xs font-normal">12/</span><span class="text-base font-bold">${d.label}</span>`; 
+                btn.addEventListener('click', () => {
+                    currentDay = d.day;
+                    updateDisplay();
+                });
+                calendarNav.appendChild(btn);
+            });
+
+            // --- 事件監聽器：景點地圖連結 ---
+            document.querySelectorAll('.activity-name-time-map').forEach(item => {
+                item.addEventListener('click', () => {
+                    // 從最近的父層 activity-item 獲取地點名稱
+                    const locationName = item.closest('.activity-item').getAttribute('data-location');
+                    if (locationName) {
+                        const encodedLocation = encodeURIComponent(locationName + " 台灣");
+                        const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodedLocation}`;
+                        window.open(mapUrl, '_blank');
+                    }
+                });
+            });
+
+            // --- 事件監聽器：Gemini 景點介紹按鈕 ---
+            document.querySelectorAll('.gemini-tip-btn').forEach(button => {
+                button.addEventListener('click', async (e) => {
+                    const activityId = e.target.getAttribute('data-activity-id');
+                    const tipArea = document.getElementById(`tip-${activityId}`);
+                    const card = document.getElementById(activityId);
+                    const locationName = card.getAttribute('data-location');
+
+                    if (tipArea.classList.contains('hidden')) {
+                        // 展開並開始載入
+                        tipArea.classList.remove('hidden');
+                        tipArea.innerHTML = `<i data-lucide="loader-circle" class="w-4 h-4 inline animate-spin mr-1"></i> 正在為您生成「${locationName}」的景點介紹...`;
+                        lucide.createIcons();
+                        
+                        // 呼叫 Gemini API
+                        const { text, sources } = await fetchGeminiTip(locationName);
+
+                        // 格式化結果
+                        let tipHtml = `<p class="font-semibold text-indigo-800">${locationName} 景點介紹：</p>`;
+                        tipHtml += `<p class="mt-1">${text}</p>`;
+
+                        if (sources.length > 0) {
+                            tipHtml += `<p class="mt-2 text-xs text-gray-400">參考來源：`;
+                            sources.slice(0, 2).forEach((source, index) => {
+                                tipHtml += `<a href="${source.uri}" target="_blank" class="hover:underline text-indigo-500">${source.title || 'Source'}</a>${index < sources.length - 1 && index < 1 ? ' | ' : ''}`;
+                            });
+                            tipHtml += `</p>`;
+                        }
+
+                        tipArea.innerHTML = tipHtml;
+
+                    } else {
+                        // 收合
+                        tipArea.classList.add('hidden');
+                        tipArea.innerHTML = '';
+                    }
+                });
+            });
+
+            // --- 事件監聽器：導航按鈕 ---
+            prevButton.addEventListener('click', () => {
+                if (currentDay > 1) {
+                    currentDay--;
+                    updateDisplay();
+                }
+            });
+
+            nextButton.addEventListener('click', () => {
+                if (currentDay < totalDays) {
+                    currentDay++;
+                    updateDisplay();
+                }
+            });
+
+            // 首次加載
+            updateDisplay();
+        });
+    </script>
+</body>
+</html>
